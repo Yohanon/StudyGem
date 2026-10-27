@@ -1,0 +1,29 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Center AI Sparkle Gem Star -->
+    <path
+        android:fillColor="#FACC15"
+        android:pathData="M54,22 L57,33 L68,36 L57,39 L54,50 L51,39 L40,36 L51,33 Z" />
+    <path
+        android:fillColor="#818CF8"
+        android:pathData="M38,28 L39.5,33 L44.5,34.5 L39.5,36 L38,41 L36.5,36 L31.5,34.5 L36.5,33 Z" />
+    <path
+        android:fillColor="#818CF8"
+        android:pathData="M70,28 L71.5,33 L76.5,34.5 L71.5,36 L70,41 L68.5,36 L63.5,34.5 L68.5,33 Z" />
+    <!-- Open Study Book Base -->
+    <!-- Left page -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M53,56 L30,48 C28.5,47.5 27,48.6 27,50.2 L27,73 C27,74.2 28,75.1 29.2,75.4 L53,81 Z" />
+    <!-- Right page -->
+    <path
+        android:fillColor="#E2E8F0"
+        android:pathData="M55,56 L78,48 C79.5,47.5 81,48.6 81,50.2 L81,73 C81,74.2 80,75.1 78.8,75.4 L55,81 Z" />
+    <!-- Book Spine / Center Divider -->
+    <path
+        android:fillColor="#6366F1"
+        android:pathData="M53,54 L55,54 L55,83 L53,83 Z" />
+</vector>
