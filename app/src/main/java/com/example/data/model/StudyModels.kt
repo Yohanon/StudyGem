@@ -2,22 +2,11 @@ package com.example.data.model
 
 import android.net.Uri
 
-enum class AiMode(
-    val title: String,
-    val shortDesc: String,
-    val fullDesc: String
-) {
-    LEARN(
-        title = "Learn Mode",
-        shortDesc = "Conceptual breakdown & intuition",
-        fullDesc = "Explains core concepts, principles, analogies, and the 'why' behind topics so you truly understand."
-    ),
-    DEMONSTRATE(
-        title = "Demonstrate Mode",
-        shortDesc = "Step-by-step practical implementation",
-        fullDesc = "Provides actionable worked solutions, runnable code walkthroughs, formula calculations, and concrete implementations."
-    )
-}
+/**
+ * Explain Mode Toggle:
+ * - When false (default / OFF): Keep answers extremely short — at most 1 to 2 paragraphs.
+ * - When true (ON): Provide explanation, cutting out all unnecessary data and keeping strictly to the subject.
+ */
 
 enum class GeminiModel(
     val id: String,
@@ -67,7 +56,7 @@ enum class MessageSender {
 data class StudySessionConfig(
     val section: StudySection = StudySection.CODING,
     val miscCategory: MiscSubCategory = MiscSubCategory.RESEARCH,
-    val mode: AiMode = AiMode.LEARN,
+    val isExplainMode: Boolean = false,
     val model: GeminiModel = GeminiModel.FLASH_3_8,
     val overrideGuardrails: Boolean = false
 ) {

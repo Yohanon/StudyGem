@@ -88,6 +88,7 @@ class StudyRepository(
         imageBase64: String? = null,
         imageMimeType: String? = null
     ): Result<String> {
+        val modeTag = if (config.isExplainMode) "Explain" else "Short"
         val userMsg = ChatMessage(
             id = UUID.randomUUID().toString(),
             sender = MessageSender.USER,
@@ -95,7 +96,7 @@ class StudyRepository(
             imageUri = imageUri,
             imageBase64 = imageBase64,
             subjectLabel = config.effectiveSubjectTitle,
-            modeLabel = config.mode.title
+            modeLabel = modeTag
         )
 
         val list = messagesBySubject.getOrPut(currentSubjectKey) { mutableListOf() }
@@ -122,7 +123,7 @@ class StudyRepository(
                     sender = MessageSender.AI,
                     text = reply,
                     subjectLabel = config.effectiveSubjectTitle,
-                    modeLabel = config.mode.title
+                    modeLabel = modeTag
                 )
                 list.add(aiMsg)
                 _currentMessages.value = list.toList()
@@ -134,7 +135,7 @@ class StudyRepository(
                     text = "⚠️ **Error:** ${error.localizedMessage ?: "Unable to complete request."}",
                     isError = true,
                     subjectLabel = config.effectiveSubjectTitle,
-                    modeLabel = config.mode.title
+                    modeLabel = modeTag
                 )
                 list.add(errorMsg)
                 _currentMessages.value = list.toList()

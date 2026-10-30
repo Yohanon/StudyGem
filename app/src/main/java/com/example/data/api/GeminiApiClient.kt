@@ -1,6 +1,5 @@
 package com.example.data.api
 
-import com.example.data.model.AiMode
 import com.example.data.model.ChatMessage
 import com.example.data.model.MessageSender
 import com.example.data.model.MiscSubCategory
@@ -337,8 +336,8 @@ class GeminiApiClient {
         rootJson.put("contents", contentsArray)
 
         val genConfig = JSONObject().apply {
-            put("temperature", if (config.mode == AiMode.LEARN) 0.6 else 0.3)
-            put("maxOutputTokens", 4096)
+            put("temperature", if (config.isExplainMode) 0.4 else 0.2)
+            put("maxOutputTokens", if (config.isExplainMode) 2048 else 450)
         }
         rootJson.put("generationConfig", genConfig)
 
@@ -450,23 +449,25 @@ class GeminiApiClient {
             }
         }
 
-        sb.appendLine("\n### ACTIVE MODE: ${config.mode.title.uppercase()}")
-        if (config.mode == AiMode.LEARN) {
-            sb.appendLine("GOAL: Conceptual Breakdown & Deep Understanding.")
-            sb.appendLine("- Explain the underlying intuition, 'why' things work the way they do, and core principles.")
-            sb.appendLine("- Use relatable analogies, simple visualizations in text, and structured breakdowns.")
-            sb.appendLine("- Ask Socratic questions or check student understanding.")
-            sb.appendLine("- Do NOT just paste raw answers or code without thorough explanations of each piece.")
+        if (!config.isExplainMode) {
+            sb.appendLine("\n### EXPLAIN TOGGLE IS OFF (STRICT CONCISENESS RULE)")
+            sb.appendLine("The student has set the Explain toggle to OFF.")
+            sb.appendLine("1. Keep your answers EXTREMELY SHORT.")
+            sb.appendLine("2. MAXIMUM LENGTH: Strictly at most 1 to 2 paragraphs (or under 150 words).")
+            sb.appendLine("3. Provide ONLY the direct, essential answer, core formula, or solution directly.")
+            sb.appendLine("4. Absolutely NO conversational fluff, no introductory greetings ('Hello! Sure!'), and no lengthy elaborations.")
+            sb.appendLine("5. Stop immediately after 1 or 2 paragraphs.")
         } else {
-            sb.appendLine("GOAL: Practical Step-by-Step Implementation Guidance.")
-            sb.appendLine("- Provide concrete, actionable, worked step-by-step solutions.")
-            sb.appendLine("- Include clear code examples with informative inline comments, edge cases, and execution steps.")
-            sb.appendLine("- For math/science, write out every algebraic step and formula substitution clearly.")
-            sb.appendLine("- Make solutions ready to apply and practice immediately.")
+            sb.appendLine("\n### EXPLAIN MODE IS ON (FOCUSED CONCEPTUAL EXPLANATION)")
+            sb.appendLine("The student has toggled Explain Mode ON.")
+            sb.appendLine("1. Provide a clear, thorough explanation of the concept or solution.")
+            sb.appendLine("2. STRICT INSTRUCTION: Cut out ALL unnecessary data, fluff, conversational pleasantries, and tangential trivia.")
+            sb.appendLine("3. Keep STRICTLY to the subject matter only. Do not deviate.")
+            sb.appendLine("4. Focus on explaining the mechanics, reasoning, and key principles directly and efficiently.")
         }
 
         sb.appendLine("\n### IMAGE INTERPRETATION (MULTIMODAL)")
-        sb.appendLine("When an image is attached, inspect it carefully. It may contain a handwritten equation, a diagram, an exam problem, a textbook excerpt, or a code snippet. Transcribe key elements and solve/explain according to the active mode.")
+        sb.appendLine("When an image is attached, inspect it carefully. It may contain a handwritten equation, a diagram, an exam problem, a textbook excerpt, or a code snippet. Transcribe key elements and answer according to the Explain toggle state (extremely short in 1-2 paragraphs if Explain is off, or focused subject-only explanation if Explain is on).")
 
         return sb.toString()
     }

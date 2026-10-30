@@ -2,7 +2,6 @@ package com.example.data.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.example.data.model.AiMode
 import com.example.data.model.GeminiModel
 import com.example.data.model.MiscSubCategory
 import com.example.data.model.StudySection
@@ -18,7 +17,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_API_KEY = "key_gemini_api_key"
         private const val KEY_THEME_MODE = "key_theme_mode" // SYSTEM, LIGHT, DARK
         private const val KEY_SELECTED_MODEL = "key_selected_model"
-        private const val KEY_AI_MODE = "key_ai_mode"
+        private const val KEY_EXPLAIN_MODE = "key_explain_mode"
         private const val KEY_OVERRIDE_GUARDRAILS = "key_override_guardrails"
         private const val KEY_STUDY_SECTION = "key_study_section"
         private const val KEY_MISC_CATEGORY = "key_misc_category"
@@ -33,8 +32,8 @@ class PreferencesManager(context: Context) {
     private val _selectedModelFlow = MutableStateFlow(getSelectedModel())
     val selectedModelFlow: StateFlow<GeminiModel> = _selectedModelFlow.asStateFlow()
 
-    private val _aiModeFlow = MutableStateFlow(getAiMode())
-    val aiModeFlow: StateFlow<AiMode> = _aiModeFlow.asStateFlow()
+    private val _explainModeFlow = MutableStateFlow(isExplainMode())
+    val explainModeFlow: StateFlow<Boolean> = _explainModeFlow.asStateFlow()
 
     private val _overrideGuardrailsFlow = MutableStateFlow(isGuardrailsOverridden())
     val overrideGuardrailsFlow: StateFlow<Boolean> = _overrideGuardrailsFlow.asStateFlow()
@@ -95,18 +94,13 @@ class PreferencesManager(context: Context) {
         _selectedModelFlow.value = model
     }
 
-    fun getAiMode(): AiMode {
-        val mode = prefs.getString(KEY_AI_MODE, AiMode.LEARN.name)
-        return try {
-            AiMode.valueOf(mode ?: AiMode.LEARN.name)
-        } catch (_: Exception) {
-            AiMode.LEARN
-        }
+    fun isExplainMode(): Boolean {
+        return prefs.getBoolean(KEY_EXPLAIN_MODE, false)
     }
 
-    fun setAiMode(mode: AiMode) {
-        prefs.edit().putString(KEY_AI_MODE, mode.name).apply()
-        _aiModeFlow.value = mode
+    fun setExplainMode(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_EXPLAIN_MODE, enabled).apply()
+        _explainModeFlow.value = enabled
     }
 
     fun isGuardrailsOverridden(): Boolean {

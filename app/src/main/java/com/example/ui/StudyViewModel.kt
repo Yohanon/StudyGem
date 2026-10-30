@@ -4,7 +4,6 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.data.model.AiMode
 import com.example.data.model.ChatMessage
 import com.example.data.model.GeminiModel
 import com.example.data.model.MiscSubCategory
@@ -26,7 +25,7 @@ data class StudyUiState(
     val showSettingsDialog: Boolean = false,
     val themeMode: String = "SYSTEM",
     val selectedModel: GeminiModel = GeminiModel.FLASH_3_8,
-    val aiMode: AiMode = AiMode.LEARN,
+    val isExplainMode: Boolean = false,
     val overrideGuardrails: Boolean = false,
     val studySection: StudySection = StudySection.CODING,
     val miscCategory: MiscSubCategory = MiscSubCategory.RESEARCH,
@@ -57,7 +56,7 @@ class StudyViewModel(
             showApiKeyDialog = false,
             themeMode = prefs.getThemeMode(),
             selectedModel = prefs.getSelectedModel(),
-            aiMode = prefs.getAiMode(),
+            isExplainMode = prefs.isExplainMode(),
             overrideGuardrails = prefs.isGuardrailsOverridden(),
             studySection = prefs.getStudySection(),
             miscCategory = prefs.getMiscCategory()
@@ -227,9 +226,13 @@ class StudyViewModel(
         _uiState.update { it.copy(selectedModel = model) }
     }
 
-    fun setAiMode(mode: AiMode) {
-        prefs.setAiMode(mode)
-        _uiState.update { it.copy(aiMode = mode) }
+    fun setExplainMode(enabled: Boolean) {
+        prefs.setExplainMode(enabled)
+        _uiState.update { it.copy(isExplainMode = enabled) }
+    }
+
+    fun toggleExplainMode() {
+        setExplainMode(!_uiState.value.isExplainMode)
     }
 
     fun setOverrideGuardrails(enabled: Boolean) {
@@ -326,7 +329,7 @@ class StudyViewModel(
         val config = StudySessionConfig(
             section = state.studySection,
             miscCategory = state.miscCategory,
-            mode = state.aiMode,
+            isExplainMode = state.isExplainMode,
             model = state.selectedModel,
             overrideGuardrails = state.overrideGuardrails
         )

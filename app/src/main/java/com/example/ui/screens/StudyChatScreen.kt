@@ -167,10 +167,10 @@ fun StudyChatScreen(
                 onMiscSelected = { viewModel.setMiscCategory(it) }
             )
 
-            // Mode Selector (Learn Mode vs Demonstrate Mode)
-            ModeToggle(
-                currentMode = uiState.aiMode,
-                onModeSelected = { viewModel.setAiMode(it) }
+            // Explain Toggle Button (Off: extremely short max 1-2 paragraphs, On: focused explanation)
+            ExplainToggle(
+                isExplainMode = uiState.isExplainMode,
+                onToggleExplain = { viewModel.setExplainMode(it) }
             )
 
             // Guardrail Status Strip

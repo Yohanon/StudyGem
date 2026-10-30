@@ -1,6 +1,6 @@
 {
   "name": "StudyGem",
-  "description": "AI Study Assistant with Learn & Demonstrate modes, multimodal vision, and academic guardrails",
+  "description": "AI Study Assistant with Explain toggle for ultra-concise or focused answers, multimodal vision, and academic guardrails",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

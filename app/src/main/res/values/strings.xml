@@ -6,6 +6,7 @@
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="settings">Settings</string>
-    <string name="learn_mode">Learn Mode</string>
-    <string name="demonstrate_mode">Demonstrate Mode</string>
+    <string name="explain_mode">Explain</string>
+    <string name="explain_mode_on_desc">Explain Mode ON: Subject-focused explanation (no unnecessary data)</string>
+    <string name="explain_mode_off_desc">Explain Mode OFF: Extremely short answer (max 1–2 paragraphs)</string>
 </resources>
