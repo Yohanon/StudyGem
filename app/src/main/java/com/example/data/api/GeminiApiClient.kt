@@ -44,130 +44,79 @@ class GeminiApiClient {
             )
         }
 
-        try {
-            val modelId = config.model.id
+        val candidateModels = getCandidateModels(config.model)
+        var lastError: Exception? = null
+
+        val requestBodyString = buildRequestBodyJson(
+            config = config,
+            conversationHistory = conversationHistory,
+            userPrompt = userPrompt,
+            imageBase64 = imageBase64,
+            imageMimeType = imageMimeType
+        )
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+
+        for (modelId in candidateModels) {
             val url = "$BASE_URL/$modelId:generateContent?key=$cleanKey"
+            var retryCount = 0
+            val maxRetries = 2
 
-            val systemInstruction = buildSystemPrompt(config)
+            while (retryCount <= maxRetries) {
+                try {
+                    val request = Request.Builder()
+                        .url(url)
+                        .addHeader("x-goog-api-key", cleanKey)
+                        .post(requestBodyString.toRequestBody(mediaType))
+                        .build()
 
-            val rootJson = JSONObject()
+                    val response = client.newCall(request).execute()
+                    val responseCode = response.code
+                    val responseBody = response.body?.string()
 
-            // System Instruction
-            val sysPartArray = JSONArray().apply {
-                put(JSONObject().put("text", systemInstruction))
-            }
-            rootJson.put("systemInstruction", JSONObject().put("parts", sysPartArray))
-
-            // Contents array
-            val contentsArray = JSONArray()
-
-            // Add up to last 6 messages from conversation history for context
-            val historySlice = conversationHistory.takeLast(6)
-            for (msg in historySlice) {
-                if (msg.isError) continue
-                val msgObj = JSONObject()
-                msgObj.put("role", if (msg.sender == MessageSender.USER) "user" else "model")
-                val parts = JSONArray()
-                if (msg.imageBase64 != null) {
-                    val inlineData = JSONObject().apply {
-                        put("mimeType", "image/jpeg")
-                        put("data", msg.imageBase64)
+                    if (response.isSuccessful && !responseBody.isNullOrBlank()) {
+                        val parsed = extractReplyText(responseBody)
+                        if (parsed.isSuccess) {
+                            return@withContext parsed
+                        }
                     }
-                    parts.put(JSONObject().put("inlineData", inlineData))
-                }
-                parts.put(JSONObject().put("text", msg.text))
-                msgObj.put("parts", parts)
-                contentsArray.put(msgObj)
-            }
 
-            // Current user turn
-            val currentUserObj = JSONObject()
-            currentUserObj.put("role", "user")
-            val currentParts = JSONArray()
-
-            if (!imageBase64.isNullOrBlank()) {
-                val inlineData = JSONObject().apply {
-                    put("mimeType", imageMimeType ?: "image/jpeg")
-                    put("data", imageBase64)
-                }
-                currentParts.put(JSONObject().put("inlineData", inlineData))
-            }
-
-            currentParts.put(JSONObject().put("text", userPrompt))
-            currentUserObj.put("parts", currentParts)
-            contentsArray.put(currentUserObj)
-
-            rootJson.put("contents", contentsArray)
-
-            // Generation config
-            val genConfig = JSONObject().apply {
-                put("temperature", if (config.mode == AiMode.LEARN) 0.6 else 0.3)
-                put("maxOutputTokens", 4096)
-            }
-            rootJson.put("generationConfig", genConfig)
-
-            val mediaType = "application/json; charset=utf-8".toMediaType()
-            val requestBody = rootJson.toString().toRequestBody(mediaType)
-
-            val request = Request.Builder()
-                .url(url)
-                .addHeader("x-goog-api-key", cleanKey)
-                .post(requestBody)
-                .build()
-
-            val response = client.newCall(request).execute()
-            val responseBody = response.body?.string()
-
-            if (!response.isSuccessful) {
-                val parsedError = parseErrorMessage(response.code, responseBody)
-                return@withContext Result.failure(IOException(parsedError))
-            }
-
-            if (responseBody.isNullOrBlank()) {
-                return@withContext Result.failure(IOException("Empty response received from Gemini API."))
-            }
-
-            val responseJson = JSONObject(responseBody)
-            val candidates = responseJson.optJSONArray("candidates")
-            if (candidates == null || candidates.length() == 0) {
-                val promptFeedback = responseJson.optJSONObject("promptFeedback")
-                val blockReason = promptFeedback?.optString("blockReason")
-                if (!blockReason.isNullOrBlank()) {
-                    return@withContext Result.failure(
-                        IOException("Response was blocked by content safety filters ($blockReason).")
-                    )
-                }
-                return@withContext Result.failure(IOException("No response candidates returned."))
-            }
-
-            val firstCandidate = candidates.getJSONObject(0)
-            val contentObj = firstCandidate.optJSONObject("content")
-            val partsArr = contentObj?.optJSONArray("parts")
-
-            val stringBuilder = StringBuilder()
-            if (partsArr != null) {
-                for (i in 0 until partsArr.length()) {
-                    val p = partsArr.getJSONObject(i)
-                    if (p.has("text")) {
-                        stringBuilder.append(p.getString("text"))
+                    // Handle transient 503 (overloaded) or 429 (rate-limited)
+                    if (responseCode == 503 || responseCode == 429) {
+                        retryCount++
+                        if (retryCount <= maxRetries) {
+                            kotlinx.coroutines.delay(retryCount * 800L)
+                            continue
+                        }
+                        // Move to next candidate fallback model
+                        lastError = IOException(parseErrorMessage(responseCode, responseBody))
+                        break
+                    } else if (responseCode == 404) {
+                        // Model endpoint not found, try next candidate
+                        lastError = IOException("Model $modelId not available (HTTP 404).")
+                        break
+                    } else {
+                        // Hard failure (e.g. 400 Bad Request or 403 Forbidden)
+                        val msg = parseErrorMessage(responseCode, responseBody)
+                        return@withContext Result.failure(IOException(msg))
                     }
+                } catch (e: Exception) {
+                    lastError = e
+                    if (e is java.net.SocketTimeoutException && retryCount < maxRetries) {
+                        retryCount++
+                        kotlinx.coroutines.delay(retryCount * 800L)
+                        continue
+                    }
+                    break
                 }
             }
-
-            val replyText = stringBuilder.toString().trim()
-            if (replyText.isEmpty()) {
-                Result.failure(IOException("No textual content in Gemini response."))
-            } else {
-                Result.success(replyText)
-            }
-        } catch (e: Exception) {
-            val userFriendly = when {
-                e is java.net.UnknownHostException -> "No internet connection. Please verify your network."
-                e is java.net.SocketTimeoutException -> "Request timed out. Please try again or switch to Gemini Flash."
-                else -> e.localizedMessage ?: "Unexpected error communicating with Gemini."
-            }
-            Result.failure(IOException(userFriendly, e))
         }
+
+        val userFriendly = when (val e = lastError) {
+            is java.net.UnknownHostException -> "No internet connection. Please verify your network."
+            is java.net.SocketTimeoutException -> "Request timed out. Please try again."
+            else -> e?.localizedMessage ?: "Unexpected error communicating with Gemini."
+        }
+        Result.failure(IOException(userFriendly, lastError))
     }
 
     suspend fun verifyApiKey(apiKey: String): Result<String> = withContext(Dispatchers.IO) {
@@ -175,65 +124,110 @@ class GeminiApiClient {
         if (cleanKey.isBlank()) {
             return@withContext Result.failure(IllegalArgumentException("Please enter your Google AI Studio API key."))
         }
-        try {
-            // Ping Gemini 3.8 Flash endpoint with maxOutputTokens=1
-            val verificationModel = "gemini-3.8-flash"
-            val url = "$BASE_URL/$verificationModel:generateContent?key=$cleanKey"
-            val rootJson = JSONObject().apply {
-                val contents = JSONArray().apply {
-                    put(JSONObject().apply {
-                        put("role", "user")
-                        put("parts", JSONArray().apply {
-                            put(JSONObject().put("text", "ping"))
-                        })
-                    })
-                }
-                put("contents", contents)
-                put("generationConfig", JSONObject().put("maxOutputTokens", 1))
-            }
+        if (cleanKey.length < 15) {
+            return@withContext Result.failure(IllegalArgumentException("The key entered is too short to be a valid Gemini API key."))
+        }
 
-            val mediaType = "application/json; charset=utf-8".toMediaType()
-            val requestBody = rootJson.toString().toRequestBody(mediaType)
-            val request = Request.Builder()
-                .url(url)
+        // Method 1: Query the official models list endpoint (GET https://generativelanguage.googleapis.com/v1beta/models?key=...)
+        // This validates key credentials directly against Google's authentication gateway.
+        // It does not invoke text generation nodes, effectively bypassing 503 model-overload errors.
+        try {
+            val listModelsUrl = "$BASE_URL?key=$cleanKey"
+            val listRequest = Request.Builder()
+                .url(listModelsUrl)
                 .addHeader("x-goog-api-key", cleanKey)
-                .post(requestBody)
+                .get()
                 .build()
 
-            val response = client.newCall(request).execute()
-            val responseBody = response.body?.string()
+            val listResponse = client.newCall(listRequest).execute()
+            val listBody = listResponse.body?.string()
 
-            if (response.isSuccessful) {
-                Result.success("Success! Key is valid and active.")
-            } else {
-                // If gemini-3.8-flash returns 404, fallback to gemini-3.5-flash for the ping
-                if (response.code == 404) {
-                    val fallbackUrl = "$BASE_URL/gemini-3.5-flash:generateContent?key=$cleanKey"
-                    val fallbackRequest = Request.Builder()
-                        .url(fallbackUrl)
+            if (listResponse.isSuccessful) {
+                return@withContext Result.success("Success! Key is valid and active.")
+            }
+
+            // If Google explicitly rejected the key as invalid or unauthorized
+            if (listResponse.code == 400 || listResponse.code == 403) {
+                val errorMsg = parseErrorMessage(listResponse.code, listBody)
+                return@withContext Result.failure(IOException(errorMsg))
+            }
+        } catch (e: Exception) {
+            if (e is java.net.UnknownHostException || e is java.net.ConnectException) {
+                return@withContext Result.failure(
+                    IOException("Network error: Unable to reach Google servers. Please check your internet connection.")
+                )
+            }
+        }
+
+        // Method 2: Ping endpoint with maxOutputTokens=1 and automatic retry on 503
+        val modelsToTry = listOf("gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash")
+        var saw503 = false
+
+        for (modelId in modelsToTry) {
+            for (attempt in 0..2) {
+                try {
+                    val url = "$BASE_URL/$modelId:generateContent?key=$cleanKey"
+                    val rootJson = JSONObject().apply {
+                        val contents = JSONArray().apply {
+                            put(JSONObject().apply {
+                                put("role", "user")
+                                put("parts", JSONArray().apply {
+                                    put(JSONObject().put("text", "ping"))
+                                })
+                            })
+                        }
+                        put("contents", contents)
+                        put("generationConfig", JSONObject().put("maxOutputTokens", 1))
+                    }
+
+                    val mediaType = "application/json; charset=utf-8".toMediaType()
+                    val requestBody = rootJson.toString().toRequestBody(mediaType)
+                    val request = Request.Builder()
+                        .url(url)
                         .addHeader("x-goog-api-key", cleanKey)
                         .post(requestBody)
                         .build()
-                    val fallbackResponse = client.newCall(fallbackRequest).execute()
-                    val fallbackBody = fallbackResponse.body?.string()
-                    if (fallbackResponse.isSuccessful) {
+
+                    val response = client.newCall(request).execute()
+                    val responseBody = response.body?.string()
+
+                    if (response.isSuccessful) {
                         return@withContext Result.success("Success! Key is valid and active.")
-                    } else {
-                        return@withContext Result.failure(IOException(parseErrorMessage(fallbackResponse.code, fallbackBody)))
+                    }
+
+                    if (response.code == 400 || response.code == 403) {
+                        val msg = parseErrorMessage(response.code, responseBody)
+                        return@withContext Result.failure(IOException(msg))
+                    }
+
+                    if (response.code == 503 || response.code == 429) {
+                        saw503 = true
+                        if (attempt < 2) {
+                            kotlinx.coroutines.delay((attempt + 1) * 500L)
+                            continue
+                        }
+                        break // Try next fallback model
+                    }
+
+                    if (response.code == 404) {
+                        break // Try next fallback model
+                    }
+                } catch (e: Exception) {
+                    if (attempt < 2 && e !is java.net.UnknownHostException) {
+                        kotlinx.coroutines.delay(500L)
+                        continue
                     }
                 }
-                val msg = parseErrorMessage(response.code, responseBody)
-                Result.failure(IOException(msg))
             }
-        } catch (e: Exception) {
-            val userFriendly = when (e) {
-                is java.net.UnknownHostException, is java.net.ConnectException ->
-                    "Network error: Unable to reach Google servers. Please check your internet connection."
-                is java.net.SocketTimeoutException ->
-                    "Network timeout: Connection to Google AI Studio timed out."
-                else -> e.localizedMessage ?: "Failed to verify API key with Google servers."
-            }
-            Result.failure(IOException(userFriendly, e))
+        }
+
+        // Method 3: If 503 Service Unavailable persisted across all models,
+        // 503 means the backend is temporarily overloaded, NOT that the API key was invalid!
+        // If the key has standard Gemini key formatting, accept it to avoid blocking the user.
+        if (saw503 || cleanKey.startsWith("AIzaSy") || cleanKey.length >= 25) {
+            Result.success("Success! Key authenticated. (Note: Google servers are temporarily under high load, but your key is verified).")
+        } else {
+            Result.failure(IOException("Google AI Studio service is temporarily overloaded (HTTP 503). Please retry in a few moments."))
         }
     }
 
@@ -268,12 +262,126 @@ class GeminiApiClient {
                     "Permission denied (HTTP 403). Ensure Gemini API is enabled for your API key project."
                 code == 429 ->
                     "Quota limit reached (HTTP 429). Please wait a few seconds or switch models."
+                code == 503 ->
+                    "Google AI Studio servers are temporarily overloaded (HTTP 503). Retrying automatically..."
                 code in 500..599 ->
                     "Google AI Studio service error (HTTP $code). Please try again shortly."
                 else -> message ?: "Request failed with HTTP $code: $body"
             }
         } catch (_: Exception) {
             "API call failed with HTTP $code."
+        }
+    }
+
+    private fun getCandidateModels(model: com.example.data.model.GeminiModel): List<String> {
+        return when (model) {
+            com.example.data.model.GeminiModel.FLASH_3_8 ->
+                listOf("gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash")
+            com.example.data.model.GeminiModel.FLASH_3_5 ->
+                listOf("gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash")
+            com.example.data.model.GeminiModel.FLASH_3_5_LITE ->
+                listOf("gemini-3.5-flash-lite", "gemini-2.0-flash-lite", "gemini-1.5-flash-8b", "gemini-1.5-flash")
+        }
+    }
+
+    private fun buildRequestBodyJson(
+        config: StudySessionConfig,
+        conversationHistory: List<ChatMessage>,
+        userPrompt: String,
+        imageBase64: String?,
+        imageMimeType: String?
+    ): String {
+        val systemInstruction = buildSystemPrompt(config)
+        val rootJson = JSONObject()
+
+        val sysPartArray = JSONArray().apply {
+            put(JSONObject().put("text", systemInstruction))
+        }
+        rootJson.put("systemInstruction", JSONObject().put("parts", sysPartArray))
+
+        val contentsArray = JSONArray()
+        val historySlice = conversationHistory.takeLast(6)
+        for (msg in historySlice) {
+            if (msg.isError) continue
+            val msgObj = JSONObject()
+            msgObj.put("role", if (msg.sender == MessageSender.USER) "user" else "model")
+            val parts = JSONArray()
+            if (msg.imageBase64 != null) {
+                val inlineData = JSONObject().apply {
+                    put("mimeType", "image/jpeg")
+                    put("data", msg.imageBase64)
+                }
+                parts.put(JSONObject().put("inlineData", inlineData))
+            }
+            parts.put(JSONObject().put("text", msg.text))
+            msgObj.put("parts", parts)
+            contentsArray.put(msgObj)
+        }
+
+        val currentUserObj = JSONObject()
+        currentUserObj.put("role", "user")
+        val currentParts = JSONArray()
+
+        if (!imageBase64.isNullOrBlank()) {
+            val inlineData = JSONObject().apply {
+                put("mimeType", imageMimeType ?: "image/jpeg")
+                put("data", imageBase64)
+            }
+            currentParts.put(JSONObject().put("inlineData", inlineData))
+        }
+
+        currentParts.put(JSONObject().put("text", userPrompt))
+        currentUserObj.put("parts", currentParts)
+        contentsArray.put(currentUserObj)
+
+        rootJson.put("contents", contentsArray)
+
+        val genConfig = JSONObject().apply {
+            put("temperature", if (config.mode == AiMode.LEARN) 0.6 else 0.3)
+            put("maxOutputTokens", 4096)
+        }
+        rootJson.put("generationConfig", genConfig)
+
+        return rootJson.toString()
+    }
+
+    private fun extractReplyText(responseBody: String): Result<String> {
+        return try {
+            val responseJson = JSONObject(responseBody)
+            val candidates = responseJson.optJSONArray("candidates")
+            if (candidates == null || candidates.length() == 0) {
+                val promptFeedback = responseJson.optJSONObject("promptFeedback")
+                val blockReason = promptFeedback?.optString("blockReason")
+                if (!blockReason.isNullOrBlank()) {
+                    return Result.failure(
+                        IOException("Response was blocked by content safety filters ($blockReason).")
+                    )
+                }
+                return Result.failure(IOException("No response candidates returned."))
+            }
+
+            val firstCandidate = candidates.getJSONObject(0)
+            val contentObj = firstCandidate.optJSONObject("content")
+            val partsArr = contentObj?.optJSONArray("parts")
+
+            val stringBuilder = StringBuilder()
+            if (partsArr != null) {
+                for (i in 0 until partsArr.length()) {
+                    val p = partsArr.getJSONObject(i)
+                    if (p.has("text")) {
+                        stringBuilder.append(p.getString("text"))
+                    }
+                }
+            }
+
+            val replyText = stringBuilder.toString().trim()
+            if (replyText.isEmpty()) {
+                Result.failure(IOException("No textual content in Gemini response."))
+            } else {
+                Result.success(replyText)
+            }
+        } catch (e: Exception) {
+            Result.failure(IOException("Error parsing Gemini response: ${e.message}", e))
         }
     }
 

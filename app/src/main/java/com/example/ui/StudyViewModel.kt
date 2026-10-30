@@ -172,12 +172,12 @@ class StudyViewModel(
         viewModelScope.launch {
             val result = repository.testApiKey(clean)
             result.fold(
-                onSuccess = {
+                onSuccess = { successMsg ->
                     _uiState.update {
                         it.copy(
                             isTestingApiKey = false,
                             isApiKeyValid = true,
-                            apiKeyTestResult = "✅ Valid API Key! Verified with Gemini 3.8 Flash."
+                            apiKeyTestResult = "✅ $successMsg"
                         )
                     }
                 },
