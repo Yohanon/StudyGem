@@ -33,19 +33,31 @@ jobs:
           fi
           chmod +x gradlew
 
-      # Passes headless flags directly to the build and Kotlin/KSP daemon
-      - name: Build Debug APK
+      - name: Configure Signing Properties
+        run: |
+          mkdir -p ~/.android
+          # Create release signing properties from GitHub secrets
+          cat > ./release-signing.properties << 'EOF'
+          storePassword=${{ secrets.STORE_PASSWORD }}
+          keyAlias=upload
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          storeFile=${{ secrets.KEYSTORE_PATH }}
+          EOF
+          # Make properties file available to Gradle
+          echo "ANDROID_SIGNING_CONFIG=release-signing.properties" >> $GITHUB_ENV
+
+      - name: Build Release APK
         run: >
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
           -Djava.awt.headless=true
           -Dkotlin.daemon.jvm.options="-Djava.awt.headless=true"
           -Dksp.run.in.process=false
 
-      - name: Upload APK Artifact
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: StudyGem-debug-apk-${{ github.run_number }}
-          path: "**/build/outputs/apk/debug/*.apk"
+          name: StudyGem-release-apk-${{ github.run_number }}
+          path: "**/build/outputs/apk/release/*.apk"
           if-no-files-found: warn
 
       - name: Publish APK to GitHub Releases
@@ -56,4 +68,4 @@ jobs:
           body: "Automated continuous build from commit ${{ github.sha }}."
           draft: false
           prerelease: false
-          files: "**/build/outputs/apk/debug/*.apk"
+          files: "**/build/outputs/apk/release/*.apk"
