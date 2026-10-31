@@ -32,16 +32,6 @@ jobs:
           fi
           chmod +x gradlew
 
-      - name: Build Debug APK
-        run: >
-          ./gradlew assembleDebug --no-daemon
-      - name: Ensure Gradle Wrapper
-        run: |
-          if [ ! -f "gradlew" ]; then
-            gradle wrapper
-          fi
-          chmod +x gradlew
-
       - name: Generate Dummy Debug Keystore
         run: |
           keytool -genkeypair -v -keystore ./debug.keystore -alias androiddebugkey \
@@ -52,10 +42,6 @@ jobs:
       - name: Build Debug APK
         run: >
           ./gradlew assembleDebug --no-daemon
-          -Djava.awt.headless=true
-          -Dkotlin.daemon.jvm.options="-Djava.awt.headless=true"
-          -Dksp.run.in.process=false
-
           -Djava.awt.headless=true
           -Dkotlin.daemon.jvm.options="-Djava.awt.headless=true"
           -Dksp.run.in.process=false
