@@ -161,10 +161,11 @@ fun ChatBubble(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    // Render Message Content with basic Markdown formatting
-                    FormattedMarkdownText(
+                    // Render Message Content with full Markdown and LaTeX Math formatting
+                    FormattedMessageContent(
                         text = message.text,
-                        defaultColor = textColor
+                        textColor = textColor,
+                        linkColor = if (isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
                     )
 
                     // Footer with timestamp and copy button
@@ -222,61 +223,16 @@ fun ChatBubble(
     }
 }
 
+/**
+ * Backward compatibility alias for FormattedMarkdownText that delegates to FormattedMessageContent.
+ */
 @Composable
 fun FormattedMarkdownText(
     text: String,
     defaultColor: Color
 ) {
-    // Parse code blocks with ```
-    val parts = remember(text) {
-        text.split("```")
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        parts.forEachIndexed { index, part ->
-            if (index % 2 == 1) {
-                // Code Block
-                val codeLines = part.trim().lines()
-                val lang = if (codeLines.isNotEmpty() && !codeLines.first().contains(" ")) codeLines.first() else ""
-                val codeBody = if (lang.isNotEmpty()) codeLines.drop(1).joinToString("\n") else part.trim()
-
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF1E293B)
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(8.dp)) {
-                        if (lang.isNotEmpty()) {
-                            Text(
-                                text = lang.uppercase(),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF94A3B8),
-                                fontSize = 10.sp
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                        }
-                        Text(
-                            text = codeBody,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                            color = Color(0xFFF1F5F9)
-                        )
-                    }
-                }
-            } else {
-                // Regular formatted text
-                if (part.isNotBlank()) {
-                    Text(
-                        text = part.trim(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = defaultColor,
-                        lineHeight = 20.sp
-                    )
-                }
-            }
-        }
-    }
+    FormattedMessageContent(
+        text = text,
+        textColor = defaultColor
+    )
 }
