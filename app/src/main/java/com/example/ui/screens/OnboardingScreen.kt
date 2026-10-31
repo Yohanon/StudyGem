@@ -68,8 +68,11 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.AmberAccent
-import com.example.ui.theme.PrimaryIndigo
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.example.R
+import com.example.ui.theme.BrandGold
+import com.example.ui.theme.BrandNavy
 
 @Composable
 fun OnboardingScreen(
@@ -114,22 +117,19 @@ fun OnboardingScreen(
         ) {
             // Header Hero Graphic
             Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(PrimaryIndigo, AmberAccent)
-                        )
-                    ),
-                contentAlignment = Alignment.Center
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = BrandNavy,
+                shadowElevation = 6.dp,
+                modifier = Modifier.size(96.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.School,
+                Image(
+                    painter = painterResource(id = R.drawable.logo_study_gem),
                     contentDescription = "StudyGem Logo",
-                    tint = Color.White,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(4.dp)
+                        .clip(RoundedCornerShape(20.dp))
                 )
             }
 

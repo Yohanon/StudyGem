@@ -84,12 +84,16 @@ fun SubjectSelector(
                         StudySection.MISC -> Pair(Icons.Default.Category, AmberAccent)
                     }
 
+                    val contentCol = if (isSelected) {
+                        if (color == AmberAccent || color == EmeraldScience) com.example.ui.theme.BrandNavy else Color.White
+                    } else MaterialTheme.colorScheme.onSurface
+
                     Surface(
                         selected = isSelected,
                         onClick = { onSectionSelected(section) },
                         shape = RoundedCornerShape(12.dp),
                         color = if (isSelected) color else MaterialTheme.colorScheme.surface,
-                        contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                        contentColor = contentCol,
                         tonalElevation = if (isSelected) 6.dp else 1.dp,
                         modifier = Modifier
                             .weight(1f)

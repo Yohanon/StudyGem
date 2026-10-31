@@ -43,8 +43,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import com.example.data.model.GeminiModel
-import com.example.ui.theme.AmberAccent
+import com.example.ui.theme.BrandGold
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,20 +71,13 @@ fun StudyTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(
+                Image(
+                    painter = painterResource(id = R.drawable.logo_study_gem),
+                    contentDescription = "StudyGem Logo",
                     modifier = Modifier
-                        .size(34.dp)
+                        .size(36.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = "StudyGem Logo",
-                        tint = AmberAccent,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                )
                 Column {
                     Text(
                         text = "StudyGem",

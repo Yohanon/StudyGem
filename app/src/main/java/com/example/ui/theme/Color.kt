@@ -2,30 +2,43 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Brand Primary (Indigo & Royal Blue)
-val PrimaryIndigo = Color(0xFF4F46E5)
-val PrimaryIndigoLight = Color(0xFF6366F1)
-val PrimaryIndigoDark = Color(0xFF3730A3)
+// ==========================================
+// Brand Palette (from Brand Identity Guide)
+// ==========================================
+val OliveBrown = Color(0xFF7F745B)         // #7F745B - Earth Olive / Muted Outline
+val BrandGold = Color(0xFFBFA95B)          // #BFA95B - Primary Gem Gold
+val BrandGoldLight = Color(0xFFD4C787)     // #D4C787 - Soft Sand Gold / Highlights
+val SageTeal = Color(0xFF82C0AF)           // #82C0AF - Sage Mint / Fresh Accent
+val Periwinkle = Color(0xFF8980BF)         // #8980BF - Periwinkle Lavender Accent
+val BrandNavy = Color(0xFF171F40)          // #171F40 - Dominant Midnight Navy
+val CrimsonRed = Color(0xFFC34043)         // #C34043 - Crimson / Error / Alert
 
-// Secondary & Accents
-val AmberAccent = Color(0xFFF59E0B)
-val EmeraldScience = Color(0xFF10B981)
-val BlueCoding = Color(0xFF2563EB)
-val PurpleMath = Color(0xFF7C3AED)
-val RoseNews = Color(0xFFE11D48)
+// Additional tonal shades for surfaces and cards
+val BrandNavyElevated = Color(0xFF1D264F)
+val BrandNavyVariant = Color(0xFF273263)
+val BrandNavyOutline = Color(0xFF38467D)
 
-// Dark Theme Surfaces (Rich Midnight Slate)
-val DarkBackground = Color(0xFF0F172A)
-val DarkSurface = Color(0xFF1E293B)
-val DarkSurfaceVariant = Color(0xFF334155)
-val DarkOnBackground = Color(0xFFF8FAFC)
-val DarkOnSurface = Color(0xFFF1F5F9)
-val DarkOutline = Color(0xFF475569)
+// Backward-compatibility aliases mapped directly to brand colors
+val AmberAccent = BrandGold
+val EmeraldScience = SageTeal
+val BlueCoding = BrandNavy
+val PurpleMath = Periwinkle
+val RoseNews = CrimsonRed
+val PrimaryIndigo = BrandNavy
+val PrimaryIndigoLight = BrandGold
 
-// Light Theme Surfaces (Clean Crisp Paper)
-val LightBackground = Color(0xFFF8FAFC)
+// Dark Theme Surfaces (Deep Midnight Navy #171F40)
+val DarkBackground = BrandNavy
+val DarkSurface = BrandNavyElevated
+val DarkSurfaceVariant = BrandNavyVariant
+val DarkOnBackground = Color(0xFFFAF9F5)
+val DarkOnSurface = Color(0xFFFAF9F5)
+val DarkOutline = OliveBrown
+
+// Light Theme Surfaces (Warm Sand & Clean Paper)
+val LightBackground = Color(0xFFF9F8F4)
 val LightSurface = Color(0xFFFFFFFF)
-val LightSurfaceVariant = Color(0xFFF1F5F9)
-val LightOnBackground = Color(0xFF0F172A)
-val LightOnSurface = Color(0xFF1E293B)
-val LightOutline = Color(0xFFCBD5E1)
+val LightSurfaceVariant = Color(0xFFEDE9DC)
+val LightOnBackground = BrandNavy
+val LightOnSurface = BrandNavy
+val LightOutline = Color(0xFFC5BFA8)

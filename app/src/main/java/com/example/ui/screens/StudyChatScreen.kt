@@ -19,10 +19,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
@@ -210,19 +214,64 @@ fun StudyChatScreen(
                 )
             }
 
-            // Chat Messages List
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .testTag("chat_messages_list")
-            ) {
-                items(uiState.messages, key = { it.id }) { msg ->
-                    ChatBubble(message = msg)
+            // Chat Messages List or Empty State
+            if (uiState.messages.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = com.example.ui.theme.BrandNavy,
+                            shadowElevation = 4.dp,
+                            modifier = Modifier.size(76.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.logo_study_gem),
+                                contentDescription = "StudyGem Logo",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(4.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                            )
+                        }
+                        Text(
+                            text = "STUDY GEM.",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            text = "Select a subject above, then type your question or attach a diagram. Toggle Explain to switch between ultra-concise summaries and in-depth study explanations.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            lineHeight = 18.sp
+                        )
+                    }
                 }
-                item {
-                    Spacer(modifier = Modifier.height(8.dp))
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .testTag("chat_messages_list")
+                ) {
+                    items(uiState.messages, key = { it.id }) { msg ->
+                        ChatBubble(message = msg)
+                    }
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
             }
         }
