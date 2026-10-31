@@ -25,7 +25,6 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      # Ensure Gradle wrapper exists and is executable
       - name: Ensure Gradle Wrapper
         run: |
           if [ ! -f "gradlew" ]; then
@@ -33,32 +32,19 @@ jobs:
           fi
           chmod +x gradlew
 
-      - name: Configure Signing Properties
-        run: |
-          mkdir -p ~/.android
-          # Create release signing properties from GitHub secrets
-          cat > ./release-signing.properties << 'EOF'
-          storePassword=${{ secrets.STORE_PASSWORD }}
-          keyAlias=upload
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          storeFile=${{ secrets.KEYSTORE_PATH }}
-          EOF
-          # Make properties file available to Gradle
-          echo "ANDROID_SIGNING_CONFIG=release-signing.properties" >> $GITHUB_ENV
-
-      - name: Build Release APK
+      - name: Build Debug APK
         run: >
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleDebug --no-daemon
           -Djava.awt.headless=true
           -Dkotlin.daemon.jvm.options="-Djava.awt.headless=true"
           -Dksp.run.in.process=false
 
-      - name: Upload Release APK Artifact
+      - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: StudyGem-release-apk-${{ github.run_number }}
-          path: "**/build/outputs/apk/release/*.apk"
-          if-no-files-found: warn
+          name: StudyGem-debug-apk-${{ github.run_number }}
+          path: "app/build/outputs/apk/debug/*.apk"
+          if-no-files-found: error
 
       - name: Publish APK to GitHub Releases
         uses: softprops/action-gh-release@v2
@@ -68,4 +54,6 @@ jobs:
           body: "Automated continuous build from commit ${{ github.sha }}."
           draft: false
           prerelease: false
-          files: "**/build/outputs/apk/release/*.apk"
+          files: "app/build/outputs/apk/debug/*.apk"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
